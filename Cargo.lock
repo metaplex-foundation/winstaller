@@ -984,4 +984,6 @@ dependencies = [
  "anyhow",
  "mktemp",
  "reqwest",
+ "winapi",
+ "winreg",
 ]

@@ -1,0 +1,38 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Latest Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Build
+        id: build
+        shell: bash
+        run: |
+          cargo build --all --release
+          binary_path="winstaller.exe"
+          mv "target/release/winstaller.exe" "${binary_path}"
+          echo "::set-output name=binary_path::${binary_path}"
+          strip "${binary_path}"
+      - name: Release Tags
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ steps.build.outputs.binary_path }}

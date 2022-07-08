@@ -1,10 +1,13 @@
 use anyhow::Result;
+use console::{style, Emoji, Style};
+use dialoguer::{theme::ColorfulTheme, Input};
 use std::{
     env,
     fs::{self, OpenOptions},
     io::Write,
     path::Path,
     ptr,
+    time::Duration,
 };
 use winapi::{
     shared::minwindef::*,
@@ -15,9 +18,41 @@ use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 const DOWNLOAD_PATH: &str =
     "https://github.com/metaplex-foundation/sugar/releases/latest/download/sugar-windows-latest.exe";
 
-fn main() -> Result<()> {
+const COMPLETE_EMOJI: Emoji<'_, '_> = Emoji("✅ ", "");
+const ERROR_EMOJI: Emoji<'_, '_> = Emoji("🛑 ", "");
+
+fn main() {
+    match run() {
+        Ok(()) => {
+            println!(
+                "\n{}{}",
+                COMPLETE_EMOJI,
+                style("Sugar successfully installed!").green().bold().dim()
+            );
+
+            // Give user time to read messages.
+            std::thread::sleep(Duration::from_secs(3));
+        }
+        Err(err) => {
+            println!(
+                "\n{}{} {}",
+                ERROR_EMOJI,
+                style("Error installing Sugar):").red(),
+                err,
+            );
+            let _: String = Input::with_theme(&get_theme())
+                .with_prompt("Exit?")
+                .interact()
+                .unwrap();
+            // finished the program with an error code to the OS
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run() -> Result<()> {
     if !cfg!(windows) {
-        eprintln!("For Linux and MacOS systems use the install script in the Sugar README.");
+        println!("For Linux and MacOS systems use the install script in the Sugar README.");
         std::process::exit(1);
     }
 
@@ -31,7 +66,7 @@ fn main() -> Result<()> {
 
     // Prefer to install to .cargo/bin if it exists, otherwise use LOCALAPPDATA.
     if cargo_bin_path.exists() {
-        eprintln!("Installing to .cargo/bin...");
+        println!("Installing to .cargo/bin...");
         let mut f = OpenOptions::new()
             .read(true)
             .write(true)
@@ -40,7 +75,7 @@ fn main() -> Result<()> {
 
         fetch_binary(&mut f)?;
     } else {
-        eprintln!("Installing to LocalAppData...");
+        println!("Installing to LocalAppData...");
 
         // Create SugarCLI folder in LOCALAPPDATA if it doesn't already exist.
         if !local_app_data_path.exists() {
@@ -67,7 +102,7 @@ fn main() -> Result<()> {
     }
 
     // Signal other processes to update their environments so the new path is registered.
-    eprintln!("Refreshing PATH...");
+    println!("Refreshing PATH...");
     unsafe {
         SendMessageTimeoutA(
             HWND_BROADCAST,
@@ -84,10 +119,19 @@ fn main() -> Result<()> {
 }
 
 fn fetch_binary<F: Write>(f: &mut F) -> Result<()> {
-    eprintln!("Getting binary....");
+    println!("Getting binary....");
     let contents = reqwest::blocking::get(DOWNLOAD_PATH)?.bytes()?;
-    eprintln!("Writing binary....");
+    println!("Writing binary....");
     f.write_all(&contents)?;
 
     Ok(())
+}
+
+fn get_theme() -> ColorfulTheme {
+    ColorfulTheme {
+        prompt_style: Style::new(),
+        checked_item_prefix: style("✔".to_string()).green().force_styling(true),
+        unchecked_item_prefix: style("✔".to_string()).black().force_styling(true),
+        ..Default::default()
+    }
 }

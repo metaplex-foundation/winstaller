@@ -56,9 +56,9 @@ fn run() -> Result<()> {
         std::process::exit(1);
     }
 
-    let drive = env::var_os("HOMEDRIVE").expect("Coulnd't find Windows home drive key.");
-    let path = env::var_os("HOMEPATH").expect("Coulnd't find Windows home path key.");
-    let local_app_data = env::var_os("LOCALAPPDATA").expect("Coudln't find LOCALAPPDATA path key.");
+    let drive = env::var_os("HOMEDRIVE").expect("Couldn't find Windows home drive key.");
+    let path = env::var_os("HOMEPATH").expect("Couldn't find Windows home path key.");
+    let local_app_data = env::var_os("LOCALAPPDATA").expect("Couldn't find LOCALAPPDATA path key.");
 
     let home = Path::new(&drive).join(&path).as_os_str().to_owned();
     let cargo_bin_path = Path::new(&home).join(".cargo").join("bin");

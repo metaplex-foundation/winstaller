@@ -1,6 +1,7 @@
 use anyhow::Result;
 use console::{style, Emoji, Style};
 use dialoguer::{theme::ColorfulTheme, Input};
+use retry::{delay::Exponential, retry};
 use std::{
     env,
     fs::{self, OpenOptions},
@@ -120,7 +121,10 @@ fn run() -> Result<()> {
 
 fn fetch_binary<F: Write>(f: &mut F) -> Result<()> {
     println!("Getting binary....");
-    let contents = reqwest::blocking::get(DOWNLOAD_PATH)?.bytes()?;
+    let contents = retry(
+        Exponential::from_millis_with_factor(100, 2.0).take(5),
+        || reqwest::blocking::get(DOWNLOAD_PATH)?.bytes(),
+    )?;
     println!("Writing binary....");
     f.write_all(&contents)?;
 
